@@ -164,3 +164,6 @@ new files/
 # OTHER GENERATED OUTPUT
 # ---------------------------------------------------------
 *.lockb
+# Agent / temporary artifacts
+.artifacts/
+.idea_backup/
