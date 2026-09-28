@@ -1,0 +1,111 @@
+﻿      'work_type': 'à¤•à¤¾à¤® à¤•à¤¾ à¤ªà¥à¤°à¤•à¤¾à¤°',
+      'workers': 'à¤®à¤œà¤¦à¥‚à¤°',
+      'category': 'à¤¶à¥à¤°à¥‡à¤£à¥€',
+      'name': 'à¤¨à¤¾à¤®',
+      'phone': 'à¤«à¥‹à¤¨'
+    };
+    return map[k.toLowerCase()] ?? k.replaceAll('_', ' ').toUpperCase();
+  }
+
+  Future<void> showForm([Map<String, dynamic>? existing]) async {
+    final isEdit = existing != null;
+    final formKey = UniqueKey();
+    final ctrls = {
+      for (final f in widget.def.fields)
+        f.key: TextEditingController(
+            text: isEdit
+                ? (existing[f.key]?.toString() ?? '')
+                : (f.key == 'date'
+                    ? DateTime.now().toIso8601String().substring(0, 10)
+                    : f.defaultValue))
+    };
+
+    final ok = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Text(widget.isHindi
+                  ? (isEdit
+                      ? '${_translate(widget.def.title)} à¤¸à¥à¤§à¤¾à¤°à¥‡à¤‚'
+                      : '${_translate(widget.def.title)} à¤œà¥‹à¥œà¥‡à¤‚')
+                  : (isEdit
+                      ? 'Edit ${widget.def.title}'
+                      : 'Add ${widget.def.title}')),
+              content: SizedBox(
+                  width: 500,
+                  child: SingleChildScrollView(
+                      key: formKey,
+                      child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: widget.def.fields.map((f) {
+                            if (f.key == 'item' ||
+                                f.key == 'vendor' ||
+                                f.key == 'quantity_unit' ||
+                                f.key == 'category' ||
+                                f.key == 'work_type') {
+                              List<String> options = [];
+                              if (f.key == 'item')
+                                options = (masters?['items'] as List?)
+                                        ?.map((e) => e['name_en'].toString())
+                                        .toList() ??
+                                    [];
+                              else if (f.key == 'vendor')
+                                options = (masters?['vendors'] as List?)
+                                        ?.map((e) => e['name'].toString())
+                                        .toList() ??
+                                    [];
+                              else if (f.key == 'quantity_unit')
+                                options = (masters?['units'] as List?)
+                                        ?.map((e) => e['symbol'].toString())
+                                        .toList() ??
+                                    [];
+                              else if (f.key == 'category')
+                                options = (masters?['expenseCategories'] as List?)
+                                        ?.map((e) => e['name'].toString())
+                                        .toList() ??
+                                    [];
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: Autocomplete<String>(
+                                  optionsBuilder: (v) => options.where((o) => o
+                                      .toLowerCase()
+                                      .contains(v.text.toLowerCase())),
+                                  initialValue:
+                                      TextEditingValue(text: ctrls[f.key]!.text),
+                                  onSelected: (v) => ctrls[f.key]!.text = v,
+                                  fieldViewBuilder:
+                                      (c, textCtrl, focus, onFieldSubmitted) {
+                                    return TextField(
+                                        controller: textCtrl,
+                                        focusNode: focus,
+                                        onChanged: (val) => ctrls[f.key]!.text = val,
+                                        decoration: InputDecoration(
+                                            labelText: _translate(f.label) +
+                                                (f.required ? ' *' : '')));
+                                  },
+                                ),
+                              );
+                            }
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: TextField(
+                                  controller: ctrls[f.key],
+                                  keyboardType:
+                                      f.numeric ? TextInputType.number : null,
+                                  decoration: InputDecoration(
+                                      labelText: _translate(f.label) +
+                                          (f.required ? ' *' : ''))),
+                            );
+                          }).toList()))),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(c, false),
+                    child: Text(widget.isHindi ? 'à¤°à¤¦à¥à¤¦ à¤•à¤°à¥‡à¤‚' : 'Cancel')),
+                FilledButton(
+                    onPressed: () {
+                      for (final f in widget.def.fields) {
+                        if (f.required && ctrls[f.key]!.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text('${f.label} is required')));
